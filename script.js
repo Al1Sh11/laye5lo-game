@@ -1065,6 +1065,22 @@ function buildLee5aHandHTML(hand, playableIds, selIds, giftedIds, isSelectable, 
   }).join('')}</div>`;
 }
 
+function buildTarneebHandHTML(hand, playableIds, isSelectable) {
+  const groups = {};
+  TARNEEB_SUITS.forEach(suit => { groups[suit] = hand.filter(c => c.suit === suit); });
+  return `<div class="hand-groups">${TARNEEB_SUITS.filter(suit => groups[suit].length > 0).map(suit => {
+    const cards = groups[suit];
+    const isPlayable = cards.some(c => playableIds.has(c.id));
+    const groupClass = isSelectable ? (isPlayable ? 'playable' : 'unplayable') : '';
+    return `<div class="hand-group ${groupClass}">
+      <div class="hand-group-label ${SUIT_CLASS[suit]}">${SUIT_SYMBOL[suit]}</div>
+      <div class="hand-group-cards">${cards.map(c =>
+        cardElTarneeb(c, { selectable: isSelectable && isPlayable, playable: isPlayable })
+      ).join('')}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 // ── CARD HTML ────────────────────────────────────────────────
 function cardEl(card, opts = {}) {
   const { selectable = false, playable = true, selected = false, rot = 0, offsuit = false, small = false, gifted = false } = opts;
@@ -1346,15 +1362,7 @@ function buildTarneebHTML() {
   const myHand = TG.hands[mySeatIndex];
   const isMyTurn = TG.phase === 'play' && TG.currentPlayer === mySeatIndex && !resolving;
   const playableIds = new Set((isMyTurn ? getPlayableTarneeb(mySeatIndex) : []).map(c => c.id));
-  const handHTML = myHand.map((c, i) => {
-    const n = myHand.length;
-    const offset = n > 1 ? (i / (n - 1) - 0.5) * Math.min(n * 2, 24) : 0;
-    const yOff = Math.abs(offset) * 0.3;
-    const play = playableIds.has(c.id);
-    return `<div style="transform:rotate(${offset}deg) translateY(${yOff}px);transform-origin:bottom center;display:inline-block">
-      ${cardElTarneeb(c, { selectable: isMyTurn, playable: play })}
-    </div>`;
-  }).join('');
+  const handHTML = buildTarneebHandHTML(myHand, playableIds, isMyTurn);
 
   const av = (i, letter) => {
     const active = TG.phase === 'play' && TG.currentPlayer === i && !resolving;
@@ -1417,25 +1425,28 @@ function buildGiftHTML() {
   const hand = G.hands[mySeatIndex];
   const canSelectGift = !G.giftSubmitted;
   const violation = G.selected.length > 0 && giftViolatesColor(hand, G.selected);
-  const n = hand.length;
-  const handHTML = hand.map((c, i) => {
-    const offset = n > 1 ? (i / (n - 1) - 0.5) * Math.min(n * 2, 24) : 0;
-    const yOff = Math.abs(offset) * 0.3;
-    const sel = selSet.has(c.id);
-    const p = pts(c), ptag = p > 0 ? `<span class="ptag">${p}</span>` : '';
-    const cc = COLOR_CLASS[c.color];
-    const pip = COLOR_PIP[c.color];
-    return `<div style="transform:rotate(${offset}deg) translateY(${yOff}px);transform-origin:bottom center;display:inline-block">
-      <div class="card ${cc}${sel ? ' selected' : ''}" ${canSelectGift ? `data-gift="${c.id}" style="cursor:pointer" tabindex="0" aria-label="${c.type} of ${c.color}"` : 'style="opacity:0.6"'}>
-        ${ptag}
-        <span class="corner tl">${lbl(c)}</span>
-        <div class="cnum">${lbl(c)}</div>
-        <span class="suit-pip">${pip}</span>
-        <div class="csym">${c.color}</div>
-        <span class="corner br">${lbl(c)}</span>
-      </div>
+  const groups = {};
+  COLOR_ORDER.forEach(col => { groups[col] = hand.filter(c => c.color === col); });
+  const handHTML = `<div class="hand-groups">${COLOR_ORDER.filter(col => groups[col].length > 0).map(col => {
+    const cards = groups[col];
+    return `<div class="hand-group">
+      <div class="hand-group-label ${COLOR_CLASS[col]}">${col} ${COLOR_PIP[col]}</div>
+      <div class="hand-group-cards">${cards.map(c => {
+        const sel = selSet.has(c.id);
+        const p = pts(c), ptag = p > 0 ? `<span class="ptag">${p}</span>` : '';
+        const cc = COLOR_CLASS[c.color];
+        const pip = COLOR_PIP[c.color];
+        return `<div class="card ${cc}${sel ? ' selected' : ''}" ${canSelectGift ? `data-gift="${c.id}" style="cursor:pointer" tabindex="0" aria-label="${c.type} of ${c.color}"` : 'style="opacity:0.6"'}>
+          ${ptag}
+          <span class="corner tl">${lbl(c)}</span>
+          <div class="cnum">${lbl(c)}</div>
+          <span class="suit-pip">${pip}</span>
+          <div class="csym">${c.color}</div>
+          <span class="corner br">${lbl(c)}</span>
+        </div>`;
+      }).join('')}</div>
     </div>`;
-  }).join('');
+  }).join('')}</div>`;
 
   const giftTargetName = pname(rightSeat);
 
