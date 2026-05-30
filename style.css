@@ -668,6 +668,38 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   background:rgba(255,220,100,0.1);
 }
 
+/* ── AUTH FORMS ── */
+.auth-field{
+  width:100%;padding:10px 14px;border-radius:10px;
+  background:rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.18);
+  color:#fff;font-size:13px;font-weight:500;
+  outline:none;box-shadow:inset 0 1px 6px rgba(0,0,0,0.3);
+  transition:border-color 0.15s;
+}
+.auth-field:focus{border-color:rgba(255,224,102,0.5);box-shadow:0 0 0 3px rgba(255,224,102,0.1),inset 0 1px 6px rgba(0,0,0,0.3)}
+.auth-field::placeholder{color:rgba(255,255,255,0.35)}
+.auth-error{color:#ff8888;font-size:11px;font-weight:600;text-align:center;min-height:14px}
+.auth-success{color:#66dd88;font-size:11px;font-weight:600;text-align:center;min-height:14px}
+.auth-link{color:rgba(255,220,100,0.8);font-size:11px;font-weight:600;cursor:pointer;background:none;border:none;text-decoration:underline;padding:0}
+.auth-link:hover{color:#ffe066}
+.auth-sep{color:rgba(255,255,255,0.3);font-size:11px}
+.auth-user-chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.14);
+  border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,0.8);
+}
+.auth-user-chip .chip-username{color:#ffe066;font-weight:700}
+.auth-user-chip button{background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:10px;padding:0 0 0 4px}
+.auth-user-chip button:hover{color:#ff8888}
+
+/* ── DEAL ANIMATION ── */
+.dealing-overlay{
+  position:absolute;inset:0;pointer-events:none;z-index:30;
+}
+.deal-fly{
+  position:absolute;pointer-events:none;
+}
+
 /* ── MOBILE RESPONSIVE ── */
 @media(max-width:480px){
   .seat-grid{grid-template-columns:1fr}

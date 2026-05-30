@@ -121,8 +121,9 @@ socket.on("gameStarted", (data) => {
   resolving = false;
   giftedIds = new Set();
   stopTimer();
-  G = { ...gs, roomCode: data.roomCode, isHost: G.isHost, giftSubmitted: false, roomMsg: '' };
+  G = { ...gs, phase: 'dealing', roomCode: data.roomCode, isHost: G.isHost, giftSubmitted: false, roomMsg: '' };
   render();
+  runDealAnimation(() => { G.phase = gs.phase; render(); });
 });
 
 socket.on("gameState", (data) => {
@@ -259,6 +260,254 @@ function hasNextTrickPlayer(p) {
   return false;
 }
 
+// ── AUTH STATE ───────────────────────────────────────────────
+let authToken = localStorage.getItem('laye5lo-token') || null;
+let currentUser = null;
+
+function authHeaders() {
+  return authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
+}
+
+async function apiCall(method, path, body) {
+  const opts = { method, headers: authHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(BACKEND_URL + path, opts);
+  const data = await res.json();
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function loadCurrentUser() {
+  if (!authToken) return;
+  const { ok, data } = await apiCall('GET', '/api/user/profile');
+  if (ok) { currentUser = data.user; }
+  else { authToken = null; currentUser = null; localStorage.removeItem('laye5lo-token'); }
+}
+
+window.authLogout = function() {
+  authToken = null; currentUser = null;
+  localStorage.removeItem('laye5lo-token');
+  localStorage.removeItem('laye5lo-name');
+  render();
+};
+
+// Called at startup to restore session
+loadCurrentUser().then(() => render());
+
+// ── AUTH HTML BUILDERS ───────────────────────────────────────
+function buildAuthHTML(mode) {
+  const isLogin = mode === 'login';
+  const isRegister = mode === 'register';
+  const isVerify = mode === 'verify';
+  const isForgot = mode === 'forgot';
+  const isReset = mode === 'reset';
+
+  let title, fields, submitLabel, links;
+
+  if (isLogin) {
+    title = 'Sign In';
+    fields = `
+      <input class="auth-field" id="af-email" type="email" placeholder="Email" autocomplete="email">
+      <input class="auth-field" id="af-pass" type="password" placeholder="Password" autocomplete="current-password">`;
+    submitLabel = 'Sign In';
+    links = `<span class="auth-link" onclick="showAuth('forgot')">Forgot password?</span>
+      <span class="auth-sep">·</span>
+      <span class="auth-link" onclick="showAuth('register')">Create account</span>`;
+  } else if (isRegister) {
+    title = 'Create Account';
+    fields = `
+      <input class="auth-field" id="af-username" type="text" placeholder="Username (3–20 chars)" autocomplete="username" maxlength="20">
+      <input class="auth-field" id="af-email" type="email" placeholder="Email" autocomplete="email">
+      <input class="auth-field" id="af-pass" type="password" placeholder="Password (6+ chars)" autocomplete="new-password">`;
+    submitLabel = 'Register';
+    links = `<span class="auth-link" onclick="showAuth('login')">Already have an account?</span>`;
+  } else if (isVerify) {
+    title = 'Verify Email';
+    fields = `
+      <p style="font-size:11px;color:rgba(255,255,255,0.65);text-align:center">Enter the 6-digit code sent to your email.</p>
+      <input class="auth-field" id="af-code" type="text" placeholder="123456" maxlength="6" style="text-align:center;letter-spacing:8px;font-size:22px">`;
+    submitLabel = 'Verify';
+    links = `<span class="auth-link" onclick="authResendCode()">Resend code</span>
+      <span class="auth-sep">·</span>
+      <span class="auth-link" onclick="showAuth('login')">Back to login</span>`;
+  } else if (isForgot) {
+    title = 'Reset Password';
+    fields = `
+      <input class="auth-field" id="af-email" type="email" placeholder="Email address" autocomplete="email">`;
+    submitLabel = 'Send Code';
+    links = `<span class="auth-link" onclick="showAuth('login')">Back to login</span>`;
+  } else if (isReset) {
+    title = 'New Password';
+    fields = `
+      <input class="auth-field" id="af-code" type="text" placeholder="Reset code" maxlength="6" style="text-align:center;letter-spacing:8px">
+      <input class="auth-field" id="af-pass" type="password" placeholder="New password (6+ chars)" autocomplete="new-password">`;
+    submitLabel = 'Set Password';
+    links = `<span class="auth-link" onclick="showAuth('forgot')">Re-send code</span>`;
+  }
+
+  return `
+<button class="back-arrow" onclick="backToMenu()" aria-label="Back to menu">&lsaquo;</button>
+<div class="menu-screen room-screen">
+  <div class="room-panel" style="gap:12px">
+    <h1 style="font-size:26px">${title}</h1>
+    ${fields}
+    <div class="auth-error" id="auth-err"></div>
+    <div class="auth-success" id="auth-ok"></div>
+    <button class="menu-btn primary" id="auth-submit-btn" onclick="authSubmit('${mode}')">${submitLabel}</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${links}
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,0.1);width:100%;padding-top:10px;text-align:center">
+      <span class="auth-link" onclick="backToMenu()">Continue as guest</span>
+    </div>
+  </div>
+</div>`;
+}
+
+window.showAuth = function(mode) {
+  G._authMode = mode;
+  G._authEmail = G._authEmail || '';
+  G.phase = 'auth';
+  render();
+};
+
+window.authSubmit = async function(mode) {
+  const btn = document.getElementById('auth-submit-btn');
+  const errEl = document.getElementById('auth-err');
+  const okEl = document.getElementById('auth-ok');
+  if (!errEl) return;
+  errEl.textContent = ''; okEl.textContent = '';
+  if (btn) btn.disabled = true;
+
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+  try {
+    if (mode === 'login') {
+      const email = val('af-email'), pass = val('af-pass');
+      if (!email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const { ok, data } = await apiCall('POST', '/api/auth/login', { email, password: pass });
+      if (ok) {
+        authToken = data.token; currentUser = data.user;
+        localStorage.setItem('laye5lo-token', authToken);
+        localStorage.setItem('laye5lo-name', data.user.username);
+        if (!data.user.isVerified) {
+          G._authEmail = data.user.email; G._authMode = 'verify';
+          okEl.textContent = 'Login successful! Please verify your email.';
+          setTimeout(() => { G.phase = 'auth'; render(); }, 1200);
+        } else {
+          initMenu();
+        }
+      } else { errEl.textContent = data.error || 'Login failed.'; }
+
+    } else if (mode === 'register') {
+      const username = val('af-username'), email = val('af-email'), pass = val('af-pass');
+      if (!username || !email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const { ok, data } = await apiCall('POST', '/api/auth/register', { username, email, password: pass });
+      if (ok) {
+        authToken = data.token; currentUser = data.user;
+        localStorage.setItem('laye5lo-token', authToken);
+        localStorage.setItem('laye5lo-name', data.user.username);
+        G._authEmail = email; G._authMode = 'verify';
+        okEl.textContent = 'Check your email for a verification code!';
+        setTimeout(() => { G.phase = 'auth'; render(); }, 1200);
+      } else { errEl.textContent = data.error || 'Registration failed.'; }
+
+    } else if (mode === 'verify') {
+      const code = val('af-code');
+      if (!code || code.length < 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
+      const email = G._authEmail || (currentUser && currentUser.email) || '';
+      const { ok, data } = await apiCall('POST', '/api/auth/verify', { email, code });
+      if (ok) {
+        if (currentUser) currentUser.isVerified = true;
+        okEl.textContent = 'Email verified! Welcome.';
+        setTimeout(() => initMenu(), 900);
+      } else { errEl.textContent = data.error || 'Invalid code.'; }
+
+    } else if (mode === 'forgot') {
+      const email = val('af-email');
+      if (!email) { errEl.textContent = 'Enter your email.'; return; }
+      G._authEmail = email;
+      const { ok, data } = await apiCall('POST', '/api/auth/forgot-password', { email });
+      okEl.textContent = data.message || 'If the account exists, a code was sent.';
+      setTimeout(() => { G._authMode = 'reset'; G.phase = 'auth'; render(); }, 1500);
+
+    } else if (mode === 'reset') {
+      const code = val('af-code'), pass = val('af-pass');
+      if (!code || !pass) { errEl.textContent = 'Fill in both fields.'; return; }
+      const email = G._authEmail || '';
+      const { ok, data } = await apiCall('POST', '/api/auth/reset-password', { email, code, newPassword: pass });
+      if (ok) {
+        okEl.textContent = 'Password reset! Please log in.';
+        setTimeout(() => { G._authMode = 'login'; G.phase = 'auth'; render(); }, 1200);
+      } else { errEl.textContent = data.error || 'Reset failed.'; }
+    }
+  } catch (e) {
+    errEl.textContent = 'Network error. Please try again.';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.authResendCode = async function() {
+  const errEl = document.getElementById('auth-err');
+  const okEl = document.getElementById('auth-ok');
+  const email = G._authEmail || (currentUser && currentUser.email) || '';
+  if (!email) { if (errEl) errEl.textContent = 'No email on file.'; return; }
+  const { ok, data } = await apiCall('POST', '/api/auth/resend-code', { email });
+  if (ok) { if (okEl) okEl.textContent = 'Code resent!'; }
+  else { if (errEl) errEl.textContent = data.error || 'Failed to resend.'; }
+};
+
+// ── DEALING ANIMATION ────────────────────────────────────────
+function runDealAnimation(onDone) {
+  const gameEl = document.getElementById('game');
+  if (!gameEl) { onDone(); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'dealing-overlay';
+  gameEl.appendChild(overlay);
+
+  const W = gameEl.offsetWidth || 360;
+  const H = gameEl.offsetHeight || 620;
+  const cx = W / 2, cy = H / 2;
+
+  // Destination centers for each relative position (bottom=me, right, top, left)
+  const dests = [
+    [cx, H * 0.82],   // bottom
+    [W * 0.85, cy],   // right
+    [cx, H * 0.10],   // top
+    [W * 0.15, cy],   // left
+  ];
+
+  const totalCards = 52;
+  let done = 0;
+
+  for (let i = 0; i < totalCards; i++) {
+    const seat = i % 4;
+    const relPos = (seat - mySeatIndex + 4) % 4;
+    const [dx, dy] = dests[relPos];
+    const delay = i * 30;
+    const dur = 380;
+
+    const el = document.createElement('div');
+    el.className = 'deal-fly card cback';
+    // Start at center, fly to destination
+    el.style.cssText = `left:${cx - 27}px;top:${cy - 41}px;width:54px;height:82px;` +
+      `--deal-sx:0px;--deal-sy:0px;--deal-dur:${dur}ms;--deal-delay:${delay}ms;`;
+    // Override keyframe to go from center to dest using JS animation
+    el.animate([
+      { transform: 'translate(0,0) scale(0.5)', opacity: 0.8 },
+      { transform: `translate(${dx - cx}px,${dy - cy}px) scale(1)`, opacity: 1 }
+    ], { duration: dur, delay, fill: 'both', easing: 'cubic-bezier(0.22,0.61,0.36,1)' });
+
+    overlay.appendChild(el);
+
+    setTimeout(() => {
+      el.remove();
+      done++;
+      if (done === totalCards) { overlay.remove(); onDone(); }
+    }, delay + dur + 60);
+  }
+}
+
 // ── GAME STATE ───────────────────────────────────────────────
 let G = { phase: 'menu', modal: null, roomCode: null, roomMsg: '', gameMode: localStorage.getItem('laye5lo-mode') || '' };
 let TG = null; // Tarneeb state
@@ -288,10 +537,12 @@ function initGame(names = [...DEFAULT_NAMES]) {
   const deck = shuffle(buildDeck());
   const hands = [[], [], [], []];
   deck.forEach((c, i) => hands[i % 4].push(c));
-  G = { phase: 'gift', gameMode: 'lee5a', hands: hands.map(sortHand), gifts: [null, null, null, null], table: [],
+  G = { phase: 'dealing', gameMode: 'lee5a', hands: hands.map(sortHand), gifts: [null, null, null, null], table: [],
     currentPlayer: 0, leadColor: null, scores: [0, 0, 0, 0], roundPts: [0, 0, 0, 0],
     selected: [], statusMsg: `Choose 3 cards to gift to ${pname(1)}`, botThought: '', playedCards: [], knownGiftedLees: [], modal: null };
-  resolving = false; giftedIds = new Set(); stopTimer(); render();
+  resolving = false; giftedIds = new Set(); stopTimer();
+  render();
+  runDealAnimation(() => { G.phase = 'gift'; render(); });
 }
 
 // ── TARNEEB DECK & HELPERS ───────────────────────────────────
@@ -321,8 +572,10 @@ function initTarneeb(names = [...DEFAULT_NAMES]) {
     scores: [0, 0], tricksTaken: [0, 0], roundHistory: [],
     bidLog: [], playerNames: [...names]
   };
-  G = { phase: 'tarneeb', gameMode: 'tarneeb', modal: null, roomCode: null, roomMsg: '' };
-  resolving = false; stopTimer(); render();
+  G = { phase: 'dealing', gameMode: 'tarneeb', modal: null, roomCode: null, roomMsg: '' };
+  resolving = false; stopTimer();
+  render();
+  runDealAnimation(() => { G.phase = 'tarneeb'; render(); if (TG.currentBidder !== mySeatIndex) setTimeout(tarneebBotTurn, CONFIG.botDelayMs); });
 }
 
 function getPlayableTarneeb(seatIdx) {
@@ -784,8 +1037,13 @@ function tarneebNextRound() {
     table: [], leadSuit: null, scores,
     tricksTaken: [0, 0], bidLog: [], playerNames: [...playerNames]
   };
+  G.phase = 'dealing'; G.modal = null;
   render();
-  if (TG.currentBidder !== mySeatIndex && !G.roomCode) setTimeout(tarneebBotTurn, CONFIG.botDelayMs);
+  runDealAnimation(() => {
+    G.phase = 'tarneeb';
+    render();
+    if (TG.currentBidder !== mySeatIndex && !G.roomCode) setTimeout(tarneebBotTurn, CONFIG.botDelayMs);
+  });
 }
 
 // ── CARD HTML ────────────────────────────────────────────────
@@ -850,13 +1108,21 @@ function render() {
 function buildHTML() {
   const modal = G.modal ? buildModal() : '';
   if (G.phase === 'menu') return buildMenuHTML() + modal;
+  if (G.phase === 'auth') return buildAuthHTML(G._authMode || 'login') + modal;
   if (G.phase === 'quickSetup') return buildQuickSetupHTML() + modal;
   if (G.phase === 'customRoom') return buildCustomRoomHTML() + modal;
   if (G.phase === 'roomLobby') return buildRoomLobbyHTML() + modal;
   if (G.phase === 'gift') return buildGiftHTML() + modal;
+  if (G.phase === 'dealing') return buildDealingHTML() + modal;
   if (G.phase === 'tarneeb') return buildTarneebHTML() + modal;
   // Lee5a play phase
   return buildPlayHTML() + modal;
+}
+
+function buildDealingHTML() {
+  return `<div style="width:100%;min-height:600px;display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;color:rgba(255,255,255,0.6);font-size:13px;font-weight:600">Dealing cards...</div>
+  </div>`;
 }
 
 // ── LEE5A PLAY HTML ──────────────────────────────────────────
@@ -1366,8 +1632,20 @@ function updateTimerBar() {
 // ── MENU ─────────────────────────────────────────────────────
 function buildMenuHTML() {
   const mode = G.gameMode;
+  const userBar = currentUser
+    ? `<div class="auth-user-chip">
+        <span>👤</span>
+        <span class="chip-username">${currentUser.username}</span>
+        ${!currentUser.isVerified ? '<span style="color:#ffb347;font-size:10px">(unverified)</span>' : ''}
+        <button onclick="authLogout()" title="Sign out">✕</button>
+       </div>`
+    : `<div style="display:flex;gap:8px">
+        <button class="auth-link" onclick="showAuth('login')" style="font-size:12px;padding:4px 10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);border-radius:14px;color:rgba(255,255,255,0.8)">Sign In</button>
+        <button class="auth-link" onclick="showAuth('register')" style="font-size:12px;padding:4px 10px;background:rgba(255,200,50,0.15);border:1px solid rgba(255,200,50,0.35);border-radius:14px;color:#ffe066">Register</button>
+       </div>`;
   return `
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">${darkMode ? '☀️' : '🌙'}</button>
+<div style="position:absolute;top:12px;left:12px;z-index:20">${userBar}</div>
 <div class="menu-screen">
   <div class="menu-mark">
     <div class="menu-card-stack">
@@ -1558,7 +1836,10 @@ window.showTarneebRules = function() { G.modal = { type: 'tarneebRules' }; rende
 window.closeModal = function() { G.modal = null; render(); };
 window.setBotDifficulty = function(level) { botDifficulty = level; render(); };
 window.openQuickSetup = function() { if (!G.gameMode) return; stopTimer(); G = { phase: 'quickSetup', modal: null, gameMode: G.gameMode }; render(); };
-window.quickPlay = function() { if (G.gameMode === 'tarneeb') initTarneeb(); else initGame(); };
+window.quickPlay = function() {
+  const names = currentUser ? [currentUser.username, 'Bot 1', 'Bot 2', 'Bot 3'] : [...DEFAULT_NAMES];
+  if (G.gameMode === 'tarneeb') initTarneeb(names); else initGame(names);
+};
 window.openCustomRoom = function() { stopTimer(); G = { phase: 'customRoom', modal: null, roomMode: 'choice', roomCode: null, joinCode: '', roomMsg: '', gameMode: G.gameMode }; render(); };
 window.showCreateRoom = function() { G.roomMode = 'create'; G.roomCode = makeRoomCode(); G.roomMsg = ''; render(); };
 window.showJoinRoom = function() { G.roomMode = 'join'; G.joinCode = ''; G.roomMsg = ''; render(); };
@@ -1662,9 +1943,11 @@ function newRound() {
   lastTrick = null;
   const deck = shuffle(buildDeck()); const hands = [[], [], [], []];
   deck.forEach((c, i) => hands[i % 4].push(c));
-  G.hands = hands.map(sortHand); G.phase = 'gift'; G.gifts = [null, null, null, null]; G.table = [];
+  G.hands = hands.map(sortHand); G.phase = 'dealing'; G.gifts = [null, null, null, null]; G.table = [];
   G.leadColor = null; G.selected = []; G.statusMsg = `Choose 3 cards to gift to ${pname(1)}`; G.botThought = ''; G.playedCards = []; G.knownGiftedLees = []; G.modal = null; G.roundPts = [0, 0, 0, 0];
-  resolving = false; giftedIds = new Set(); stopTimer(); render();
+  resolving = false; giftedIds = new Set(); stopTimer();
+  render();
+  runDealAnimation(() => { G.phase = 'gift'; render(); });
 }
 
 window.createOnlineRoom = function() { socket.emit("createRoom"); };
@@ -1674,7 +1957,12 @@ window.joinOnlineRoom = function() { G.roomMode = 'join'; G.joinCode = ''; G.roo
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (G.modal) { G.modal = null; render(); }
-    else { showRules(); }
+    else if (G.phase !== 'auth') { showRules(); }
+    return;
+  }
+  if (e.key === 'Enter' && G.phase === 'auth') {
+    const btn = document.getElementById('auth-submit-btn');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
     return;
   }
   if ((e.key === 'Enter' || e.key === ' ') && G.phase === 'gift' && !G.giftSubmitted) {
