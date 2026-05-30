@@ -484,8 +484,8 @@ function runDealAnimation(onDone) {
     const seat = i % 4;
     const relPos = (seat - mySeatIndex + 4) % 4;
     const [dx, dy] = dests[relPos];
-    const delay = i * 30;
-    const dur = 380;
+    const delay = i * 20;
+    const dur = 340;
 
     const el = document.createElement('div');
     el.className = 'deal-fly card cback';
@@ -497,6 +497,14 @@ function runDealAnimation(onDone) {
       { transform: 'translate(0,0) scale(0.5)', opacity: 0.8 },
       { transform: `translate(${dx - cx}px,${dy - cy}px) scale(1)`, opacity: 1 }
     ], { duration: dur, delay, fill: 'both', easing: 'cubic-bezier(0.22,0.61,0.36,1)' });
+
+    // Add flip reveal after the fly-in
+    setTimeout(() => {
+      el.animate([
+        { transform: `translate(${dx - cx}px,${dy - cy}px) scaleX(0)` },
+        { transform: `translate(${dx - cx}px,${dy - cy}px) scaleX(1)` },
+      ], { duration: 120, easing: 'ease-out', fill: 'forwards' });
+    }, delay + dur - 60);
 
     overlay.appendChild(el);
 
@@ -1005,6 +1013,7 @@ function endRound() {
   G.roundPts = [0, 0, 0, 0]; G.phase = over ? 'gameEnd' : 'roundEnd';
   render();
   G.scores.forEach((s, i) => animateScoreUpdate(i, oldScores[i], s));
+  requestAnimationFrame(animateModalIn);
 }
 
 function doGifts() {
@@ -1158,6 +1167,7 @@ function tarneebEndRound() {
   TG.phase = gameOver ? 'gameEnd' : 'roundEnd';
   TG.roundResult = { bidTeam, bidAmt, tricksBid, bidTeamPts, defTeamPts };
   render();
+  requestAnimationFrame(animateModalIn);
 }
 
 function tarneebNextRound() {
@@ -1712,6 +1722,34 @@ function buildGiftHTML() {
 }
 
 // ── MODAL ────────────────────────────────────────────────────
+function animateModalIn() {
+  const modal = document.querySelector('.modal-box');
+  if (!modal) return;
+  modal.animate([
+    { transform: 'translateY(40px)', opacity: 0 },
+    { transform: 'translateY(0)', opacity: 1 },
+  ], { duration: 300, easing: 'cubic-bezier(0.22,0.61,0.36,1)', fill: 'forwards' });
+
+  const rows = modal.querySelectorAll('.modal-row');
+  rows.forEach((row, i) => {
+    row.style.opacity = '0';
+    row.animate([
+      { opacity: 0, transform: 'translateY(10px)' },
+      { opacity: 1, transform: 'translateY(0)' },
+    ], { duration: 220, delay: i * 80, easing: 'ease-out', fill: 'forwards' });
+
+    const fill = row.querySelector('.progress-bar-fill');
+    if (fill) {
+      const finalWidth = fill.style.width;
+      fill.style.width = '0%';
+      setTimeout(() => {
+        fill.style.transition = 'width 0.5s ease';
+        fill.style.width = finalWidth;
+      }, i * 80 + 200);
+    }
+  });
+}
+
 function buildModal() {
   const m = G.modal;
   if (m.type === 'rules') return `<div class="modal-bg" onclick="closeModal()"><div class="modal-box" onclick="event.stopPropagation()">
