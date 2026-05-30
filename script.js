@@ -906,10 +906,11 @@ function setStatus() {
 function endRound() {
   const oldScores = [...G.scores];
   G.scores = G.scores.map((s, i) => s + G.roundPts[i]);
-  G.scores.forEach((s, i) => animateScoreUpdate(i, oldScores[i], s));
   const over = Math.max(...G.scores) >= CONFIG.winScore;
   G.modal = { type: over ? 'gameEnd' : 'roundEnd', rp: [...G.roundPts], sc: [...G.scores] };
-  G.roundPts = [0, 0, 0, 0]; G.phase = over ? 'gameEnd' : 'roundEnd'; render();
+  G.roundPts = [0, 0, 0, 0]; G.phase = over ? 'gameEnd' : 'roundEnd';
+  render();
+  G.scores.forEach((s, i) => animateScoreUpdate(i, oldScores[i], s));
 }
 
 function doGifts() {
