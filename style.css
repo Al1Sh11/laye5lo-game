@@ -909,3 +909,15 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   .score-strip { display: none; }
   #table-wrap { flex: 1; min-width: 0; }
 }
+.gift-rule-hint {
+  font-size: 10px;
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.gift-rule-hint b { color: rgba(255,200,50,0.8); }
+.hand-group.gift-blocked .card {
+  box-shadow: 0 0 0 2px rgba(255,80,80,0.8) !important;
+  border-color: rgba(255,80,80,0.8) !important;
+}

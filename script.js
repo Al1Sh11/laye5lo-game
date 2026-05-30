@@ -1632,9 +1632,25 @@ function buildGiftHTML() {
   const violation = G.selected.length > 0 && giftViolatesColor(hand, G.selected);
   const groups = {};
   COLOR_ORDER.forEach(col => { groups[col] = hand.filter(c => c.color === col); });
+
+  const hasLee = G.hands[mySeatIndex].some(c => isLee(c));
+  const ruleHint = hasLee
+    ? `<div class="gift-rule-hint">Gift 3 to <b>${pname(rightSeat)}</b>. Holding Lee5a — <b>can't empty any color.</b></div>`
+    : `<div class="gift-rule-hint">Gift 3 cards to <b>${pname(rightSeat)}</b>.</div>`;
+
+  const blockedColors = new Set();
+  if (G.selected.length > 0 && giftViolatesColor(G.hands[mySeatIndex], G.selected)) {
+    const selIds2 = new Set(G.selected.map(c => c.id));
+    const groups2 = {};
+    G.hands[mySeatIndex].forEach(c => { (groups2[c.color] = groups2[c.color] || []).push(c); });
+    for (const [col, cards] of Object.entries(groups2)) {
+      if (cards.every(c => selIds2.has(c.id))) blockedColors.add(col);
+    }
+  }
+
   const handHTML = `<div class="hand-groups">${COLOR_ORDER.filter(col => groups[col].length > 0).map(col => {
     const cards = groups[col];
-    return `<div class="hand-group">
+    return `<div class="hand-group${blockedColors.has(col) ? ' gift-blocked' : ''}">
       <div class="hand-group-label ${COLOR_CLASS[col]}">${col} ${COLOR_PIP[col]}</div>
       <div class="hand-group-cards">${cards.map(c => {
         const sel = selSet.has(c.id);
@@ -1711,6 +1727,7 @@ function buildGiftHTML() {
       <span class="pname">${pname(meSeat)}</span>
       <span class="pscore">${G.scores[meSeat]}pts</span>
     </div>
+    ${ruleHint}
     <div id="my-hand">${handHTML}</div>
     ${G.giftSubmitted
       ? `<div class="room-msg" style="margin-top:6px">Waiting for other players to gift...</div>`
