@@ -1007,12 +1007,13 @@ function avatarWithRing(seatIndex, label, ringState) {
       ? 'linear-gradient(135deg,#1a6b3a,#0f4a26)'
       : 'linear-gradient(135deg,#2a5298,#1e3c72)';
 
+  const arcId = ringState === 'mine' ? ' id="my-ring-arc"' : '';
   return `<div class="${wrapClass}">
     <svg width="56" height="56" viewBox="0 0 56 56">
       <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5.5"/>
       <circle cx="28" cy="28" r="22" fill="none" stroke="${arcStroke}" stroke-width="5.5"
         stroke-dasharray="${circ}" stroke-dashoffset="${arcOffset}"
-        stroke-linecap="round" class="ring-arc"/>
+        stroke-linecap="round" class="ring-arc"${arcId}/>
     </svg>
     <div class="avatar" style="background:${avatarBg};border:2px solid ${avatarBorder};${avatarOpacity}">${label}</div>
   </div>`;
@@ -1926,7 +1927,7 @@ function startTimer() {
 }
 function stopTimer() { if (turnTimer !== null) { clearInterval(turnTimer); turnTimer = null; } turnTimeLeft = CONFIG.timerSeconds; updateTimerRing(); }
 function updateTimerRing() {
-  const arc = document.querySelector('.avatar-wrap .ring-arc');
+  const arc = document.getElementById('my-ring-arc');
   if (!arc) return;
   const circ = 138.2;
   const pct = turnTimeLeft / CONFIG.timerSeconds;
