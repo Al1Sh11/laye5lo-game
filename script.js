@@ -2,7 +2,7 @@
 // Laye5lo — Lebanese Card Games (Lee5a + Tarneeb 400)
 // ══════════════════════════════════════════════════════════════
 
-const BACKEND_URL = "https://laye5lo-game.onrender.com";
+const BACKEND_URL = "https://laye5lo-server.onrender.com";
 const socket = io(BACKEND_URL);
 
 // ── CONFIG ───────────────────────────────────────────────────
