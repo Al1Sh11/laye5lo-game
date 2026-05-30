@@ -963,3 +963,38 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .conn-banner.visible {
   transform: translateY(0);
 }
+.bid-badge {
+  background: rgba(255,200,50,0.18);
+  border: 1px solid rgba(255,200,50,0.35);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffe066;
+  margin-left: 4px;
+}
+.bid-min-label {
+  font-size: 10px;
+  color: rgba(255,200,50,0.8);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.bid-btn.valid-min {
+  border-color: rgba(255,200,50,0.7);
+  background: rgba(255,200,50,0.15);
+  color: #ffe066;
+}
+.bid-pass-row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.bid-btn.pass-btn {
+  width: 100%;
+  border-radius: 14px;
+  background: rgba(255,80,80,0.15);
+  border-color: rgba(255,80,80,0.4);
+  color: #ff8888;
+  padding: 0 14px;
+  height: 32px;
+}

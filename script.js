@@ -1509,20 +1509,36 @@ function buildTarneebHTML() {
 
   if (TG.phase === 'bid') {
     const isMyBid = TG.currentBidder === mySeatIndex;
-    const minBid = TG.highBid.amount + 1;
+    const minBid = Math.max(7, TG.highBid.amount + 1);
     const allPassed = TG.passes >= 3 && TG.highBid.seat === -1;
     const forcedBid = allPassed && TG.currentBidder === TG.dealer;
-    const bidButtons = isMyBid ? `<div class="bid-buttons">${
-      Array.from({ length: 13 - 7 + 1 }, (_, i) => i + 7).map(n =>
-        `<button class="bid-btn" onclick="playerBid(${n})" ${n < minBid && !forcedBid ? 'disabled' : ''}>${n}</button>`
-      ).join('')
-    }${!forcedBid ? '<button class="bid-btn pass-btn" onclick="playerBid(0)">Pass</button>' : ''}</div>` : '';
-    const bidLog = TG.bidLog.map(e => `<div>${pname(e.seat)}: ${e.action === 'pass' ? 'Pass' : 'Bid ' + e.amount}</div>`).join('');
+
+    const seatBadges = [0,1,2,3].map(i => {
+      const entry = TG.bidLog.filter(e => e.seat === i).pop();
+      if (!entry) return '';
+      const badge = entry.action === 'pass'
+        ? `<span class="bid-badge" style="color:#ff8888;border-color:rgba(255,80,80,0.3);background:rgba(255,80,80,0.1)">Pass</span>`
+        : `<span class="bid-badge">${entry.amount}</span>`;
+      return `<div style="font-size:9px;color:rgba(255,255,255,0.6)">${pname(i)}${badge}</div>`;
+    }).join('');
+
+    const bidButtons = isMyBid ? `
+      <div class="bid-min-label">${forcedBid ? 'Forced bid — minimum 7' : `Minimum bid: ${minBid}`}</div>
+      <div class="bid-buttons">${
+        Array.from({ length: 7 }, (_, i) => i + 7).map(n => {
+          const isMin = n === minBid;
+          const isValid = n >= minBid || forcedBid;
+          return `<button class="bid-btn${isMin ? ' valid-min' : ''}" onclick="playerBid(${n})" ${!isValid ? 'disabled' : ''}>${n}</button>`;
+        }).join('')
+      }</div>
+      ${!forcedBid ? `<div class="bid-pass-row"><button class="bid-btn pass-btn" onclick="playerBid(0)">Pass</button></div>` : ''}
+    ` : `<div style="font-size:11px;color:rgba(255,255,255,0.6)">${pname(TG.currentBidder)} is bidding...</div>
+      <div class="bot-thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+
     centerContent = `<div class="bid-panel">
-      <h4>Bidding${TG.highBid.seat >= 0 ? ` — Current: ${TG.highBid.amount} by ${pname(TG.highBid.seat)}` : ''}</h4>
-      <div style="font-size:11px;color:rgba(255,255,255,0.6)">${isMyBid ? 'Your bid:' : pname(TG.currentBidder) + ' is bidding...'}</div>
+      <h4>Bidding${TG.highBid.seat >= 0 ? ` — High: <b style="color:#ffe066">${TG.highBid.amount}</b> by ${pname(TG.highBid.seat)}` : ''}</h4>
+      <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px">${seatBadges}</div>
       ${bidButtons}
-      <div class="bid-log">${bidLog}</div>
     </div>`;
   } else if (TG.phase === 'trumpSelect') {
     const isMySelect = TG.highBid.seat === mySeatIndex;
