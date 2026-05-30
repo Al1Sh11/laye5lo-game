@@ -904,7 +904,9 @@ function setStatus() {
   G.statusMsg = G.currentPlayer === mySeatIndex ? `Your turn!${G.leadColor ? ' - follow ' + G.leadColor : ''}` : pname(G.currentPlayer) + ' is playing...';
 }
 function endRound() {
+  const oldScores = [...G.scores];
   G.scores = G.scores.map((s, i) => s + G.roundPts[i]);
+  G.scores.forEach((s, i) => animateScoreUpdate(i, oldScores[i], s));
   const over = Math.max(...G.scores) >= CONFIG.winScore;
   G.modal = { type: over ? 'gameEnd' : 'roundEnd', rp: [...G.roundPts], sc: [...G.scores] };
   G.roundPts = [0, 0, 0, 0]; G.phase = over ? 'gameEnd' : 'roundEnd'; render();
@@ -1200,6 +1202,59 @@ function buildDealingHTML() {
   </div>`;
 }
 
+// ── SCORE SIDEBAR ────────────────────────────────────────────
+function buildScoreSidebar(scores, winScore, gameMode) {
+  const playerRows = [0,1,2,3].map(i => {
+    const score = scores[i];
+    const danger = score >= (gameMode === 'tarneeb' ? 350 : 80);
+    const pct = Math.min(100, (score / winScore) * 100);
+    return `<div class="sidebar-player-row${danger ? ' danger' : ''}" id="sidebar-row-${i}">
+      <div class="sidebar-row-top">
+        <span class="sidebar-name">${pname(i).substring(0,8)}</span>
+        <span class="sidebar-score" id="sidebar-score-${i}">${score}</span>
+      </div>
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-fill${danger ? ' danger' : ''}" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const lastTrickHTML = lastTrick ? `
+    <hr class="sidebar-divider">
+    <div class="sidebar-title">Last Trick</div>
+    <div class="last-trick-mini">${lastTrick.cards.map(t =>
+      `<div class="mini-card ${COLOR_CLASS[t.card.color]}">${lbl(t.card)}</div>`
+    ).join('')}</div>
+    <div class="last-trick-winner">→ ${pname(lastTrick.winner)}${lastTrick.pts ? ' +'+lastTrick.pts : ''}</div>
+  ` : '';
+
+  return `<div class="score-sidebar">
+    <div class="sidebar-title">Scores <span style="color:rgba(255,255,255,0.3);font-weight:400">/ ${winScore}</span></div>
+    ${playerRows}
+    ${lastTrickHTML}
+  </div>`;
+}
+
+function animateScoreUpdate(seatIndex, oldScore, newScore) {
+  const el = document.getElementById(`sidebar-score-${seatIndex}`);
+  const row = document.getElementById(`sidebar-row-${seatIndex}`);
+  if (!el || oldScore === newScore) return;
+  const start = performance.now();
+  const duration = 600;
+  const diff = newScore - oldScore;
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    el.textContent = Math.round(oldScore + diff * t);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = newScore;
+  }
+  requestAnimationFrame(tick);
+  if (row && diff > 0) {
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 800);
+  }
+}
+
 // ── LEE5A PLAY HTML ──────────────────────────────────────────
 function buildPlayHTML() {
   const rel = n => (mySeatIndex + n) % 4;
@@ -1257,7 +1312,9 @@ function buildPlayHTML() {
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">${darkMode ? '☀️' : '🌙'}</button>
 <button class="sound-toggle" onclick="toggleSound()" aria-label="Toggle sound">${soundEnabled ? '🔊' : '🔇'}</button>
 ${isOnline ? '<div class="reaction-bar"><button class="reaction-btn" onclick="sendReaction(\'👏\')">👏</button><button class="reaction-btn" onclick="sendReaction(\'😱\')">😱</button><button class="reaction-btn" onclick="sendReaction(\'😂\')">😂</button><button class="reaction-btn" onclick="sendReaction(\'🎯\')">🎯</button></div>' : ''}
-<div id="table-wrap">
+<div id="game-layout">
+  ${buildScoreSidebar(G.scores, CONFIG.winScore, 'lee5a')}
+  <div id="table-wrap">
   ${scoreStrip}
   <div class="tz-top2">
     <div class="player-zone">
@@ -1307,6 +1364,7 @@ ${isOnline ? '<div class="reaction-bar"><button class="reaction-btn" onclick="se
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="chip-btn" onclick="showRules()" aria-label="Show rules">Rules</button>
     </div>
+  </div>
   </div>
 </div>`;
 }
@@ -1410,7 +1468,9 @@ function buildTarneebHTML() {
 <button class="back-arrow" onclick="backToMenu()" aria-label="Back to menu">&lsaquo;</button>
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">${darkMode ? '☀️' : '🌙'}</button>
 <button class="sound-toggle" onclick="toggleSound()" aria-label="Toggle sound">${soundEnabled ? '🔊' : '🔇'}</button>
-<div id="table-wrap">
+<div id="game-layout">
+  ${buildScoreSidebar([TG.scores[0], TG.scores[0], TG.scores[1], TG.scores[1]], CONFIG.tarneebWinScore, 'tarneeb')}
+  <div id="table-wrap">
   ${scoreInfo}
   <div class="tz-top2">
     <div class="player-zone">
@@ -1451,6 +1511,7 @@ function buildTarneebHTML() {
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="chip-btn" onclick="showTarneebRules()" aria-label="Show rules">Rules</button>
     </div>
+  </div>
   </div>
 </div>`;
 }
