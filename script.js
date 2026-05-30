@@ -879,6 +879,54 @@ function pickSmartCard(idx, pl, difficulty) {
   return scored[0] || { card: pl[0], reason: 'no better move available' };
 }
 
+function animateTrickWin(winnerSeatIndex, onDone) {
+  const gameEl = document.getElementById('game');
+  if (!gameEl) { onDone(); return; }
+
+  const relPos = (winnerSeatIndex - mySeatIndex + 4) % 4;
+  const zones = [
+    [gameEl.offsetWidth / 2, gameEl.offsetHeight * 0.85],
+    [gameEl.offsetWidth * 0.92, gameEl.offsetHeight / 2],
+    [gameEl.offsetWidth / 2, gameEl.offsetHeight * 0.12],
+    [gameEl.offsetWidth * 0.08, gameEl.offsetHeight / 2],
+  ];
+  const [wx, wy] = zones[relPos];
+
+  const tableCards = document.querySelectorAll('.played-slot .card');
+  let done = 0;
+  const total = tableCards.length;
+  if (total === 0) { onDone(); return; }
+
+  tableCards.forEach(card => {
+    const rect = card.getBoundingClientRect();
+    const gameRect = gameEl.getBoundingClientRect();
+    const cx = rect.left - gameRect.left + rect.width / 2;
+    const cy = rect.top - gameRect.top + rect.height / 2;
+    const dx = wx - cx;
+    const dy = wy - cy;
+
+    card.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx}px,${dy}px) scale(0.3)`, opacity: 0 },
+    ], { duration: 400, easing: 'ease-in', fill: 'forwards' })
+      .finished.then(() => {
+        done++;
+        if (done === total) {
+          const avatarWraps = document.querySelectorAll('.avatar-wrap');
+          const avatarWrap = avatarWraps[relPos];
+          if (avatarWrap) {
+            avatarWrap.animate([
+              { filter: 'brightness(1)' },
+              { filter: 'brightness(2.5)' },
+              { filter: 'brightness(1)' },
+            ], { duration: 300, easing: 'ease-out' });
+          }
+          onDone();
+        }
+      });
+  });
+}
+
 function finishTrick() {
   resolving = false;
   const lc = G.leadColor;
@@ -893,13 +941,17 @@ function finishTrick() {
   G.roundPts[wi] += p;
   lastTrick = { cards: [...G.table], winner: wi, pts: p };
   G.statusMsg = p === 37 ? `${pname(wi)} took both Lee5as! +37 pts — round over!` : `${pname(wi)} wins trick${p > 0 ? ' (+' + p + 'pts)' : ''}`;
-  G.table = []; G.leadColor = null;
-  if (leeCount === 2) { endRound(); return; }
-  if (G.hands.every(h => h.length === 0)) { endRound(); return; }
-  G.currentPlayer = G.hands[wi].length > 0 ? wi : nextActiveP(wi);
-  setStatus(); render();
-  if (G.currentPlayer === mySeatIndex) startTimer();
-  else setTimeout(aiPlay, 720);
+  render();
+
+  animateTrickWin(wi, () => {
+    G.table = []; G.leadColor = null;
+    if (leeCount === 2) { endRound(); return; }
+    if (G.hands.every(h => h.length === 0)) { endRound(); return; }
+    G.currentPlayer = G.hands[wi].length > 0 ? wi : nextActiveP(wi);
+    setStatus(); render();
+    if (G.currentPlayer === mySeatIndex) startTimer();
+    else setTimeout(aiPlay, 720);
+  });
 }
 function avatarWithRing(seatIndex, label, ringState) {
   const circ = 138.2; // 2 * PI * 22
