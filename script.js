@@ -850,7 +850,7 @@ function finishTrick() {
   if (leeCount === 2) { p = 37; playLee5aSound(); } else { playTrickWinSound(); }
   G.roundPts[wi] += p;
   lastTrick = { cards: [...G.table], winner: wi, pts: p };
-  G.statusMsg = p === 37 ? `${pname(wi)} took both Lee5as! +37 pts - round over!` : `${pname(wi)} wins trick${p > 0 ? ' (+' + p + 'pts)' : ''}`;
+  G.statusMsg = p === 37 ? `${pname(wi)} took both Lee5as! +37 pts — round over!` : `${pname(wi)} wins trick${p > 0 ? ' (+' + p + 'pts)' : ''}`;
   G.table = []; G.leadColor = null;
   if (leeCount === 2) { endRound(); return; }
   if (G.hands.every(h => h.length === 0)) { endRound(); return; }
@@ -1507,7 +1507,7 @@ function buildModal() {
       <b style="color:#ffe066">Gifting:</b> Gift 3 cards right. Holding lee5a? Can't empty any color.<br>
       <b style="color:#ffe066">Winner:</b> Only lead-color cards compete for the trick.<br>
       <b style="color:#ffe066">Strength:</b> 1 > Skip > +2 > Rev > 0 > 9...2<br>
-      <b style="color:#ffe066">Lee5a:</b> Both blue +2 and yellow 0 taken in the same trick = 37 pts, and the round ends immediately.
+      <b style="color:#ff6666">⚡ Lee5a:</b> Taking BOTH blue +2 AND yellow 0 in the same trick = <b>+37 pts</b> for you — and the round ends immediately!
     </div>
     <div style="text-align:center;margin-top:12px"><button class="chip-btn" onclick="closeModal()">Close</button></div>
   </div></div>`;
