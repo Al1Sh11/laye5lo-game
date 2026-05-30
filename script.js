@@ -11,7 +11,7 @@ const CONFIG = {
   tarneebWinScore: 400,
   handSize: 13,
   giftCount: 3,
-  timerSeconds: 20,
+  timerSeconds: 30,
   botDelayMs: 680,
   trickDelayMs: 1150,
 };
@@ -859,6 +859,46 @@ function finishTrick() {
   if (G.currentPlayer === mySeatIndex) startTimer();
   else setTimeout(aiPlay, 720);
 }
+function avatarWithRing(seatIndex, label, ringState) {
+  const circ = 138.2; // 2 * PI * 22
+  let arcStroke = 'rgba(255,255,255,0.06)';
+  let arcOffset = circ;
+  let wrapClass = 'avatar-wrap';
+
+  if (ringState === 'mine') {
+    const pct = turnTimeLeft / CONFIG.timerSeconds;
+    arcOffset = circ * (1 - pct);
+    if (turnTimeLeft > 15) arcStroke = '#22ee66';
+    else if (turnTimeLeft > 5) arcStroke = '#ffaa00';
+    else { arcStroke = '#ff3333'; wrapClass += ' ring-urgent'; }
+  } else if (ringState === 'bot') {
+    arcOffset = circ * 0.25;
+    arcStroke = 'rgba(255,200,50,0.7)';
+    wrapClass += ' ring-bot';
+  }
+
+  const isActive = ringState === 'mine' || ringState === 'bot';
+  const avatarOpacity = isActive ? '' : 'opacity:0.6;';
+  const avatarBorder = ringState === 'mine'
+    ? (turnTimeLeft > 15 ? 'rgba(34,238,102,0.7)' : turnTimeLeft > 5 ? 'rgba(255,170,0,0.6)' : 'rgba(255,51,51,0.8)')
+    : ringState === 'bot' ? 'rgba(255,200,50,0.5)' : 'rgba(255,255,255,0.2)';
+  const avatarBg = (ringState === 'mine' && turnTimeLeft <= 5)
+    ? 'linear-gradient(135deg,#5a1a1a,#3a0f0f)'
+    : seatIndex === mySeatIndex
+      ? 'linear-gradient(135deg,#1a6b3a,#0f4a26)'
+      : 'linear-gradient(135deg,#2a5298,#1e3c72)';
+
+  return `<div class="${wrapClass}">
+    <svg width="56" height="56" viewBox="0 0 56 56">
+      <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5.5"/>
+      <circle cx="28" cy="28" r="22" fill="none" stroke="${arcStroke}" stroke-width="5.5"
+        stroke-dasharray="${circ}" stroke-dashoffset="${arcOffset}"
+        stroke-linecap="round" class="ring-arc"/>
+    </svg>
+    <div class="avatar" style="background:${avatarBg};border:2px solid ${avatarBorder};${avatarOpacity}">${label}</div>
+  </div>`;
+}
+
 function pname(i) { return playerNames[i] || DEFAULT_NAMES[i]; }
 function setStatus() {
   G.statusMsg = G.currentPlayer === mySeatIndex ? `Your turn!${G.leadColor ? ' - follow ' + G.leadColor : ''}` : pname(G.currentPlayer) + ' is playing...';
@@ -1127,7 +1167,7 @@ function render() {
   const savedFocusId = document.activeElement ? document.activeElement.id || document.activeElement.dataset?.play : null;
   document.getElementById('root').innerHTML = buildHTML();
   attachEvents();
-  updateTimerBar();
+  updateTimerRing();
   applyTheme();
   // Restore focus
   if (savedFocusId) {
@@ -1191,15 +1231,11 @@ function buildPlayHTML() {
   const handHTML = buildLee5aHandHTML(myHand, playableIds, selIds, giftedIds, isMyTurn);
 
   const av = (i, letter) => {
-    const active = G.currentPlayer === i && !resolving && G.phase === 'play';
-    const thinking = active && i !== mySeatIndex;
-    return `<div class="avatar${active ? ' active' : ''}">${letter}</div>
-      ${thinking ? '<div class="bot-thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' : ''}`;
+    if (i === mySeatIndex && G.currentPlayer === i && !resolving) return avatarWithRing(i, letter, 'mine');
+    if (G.currentPlayer === i && !resolving) return avatarWithRing(i, letter, 'bot');
+    return avatarWithRing(i, letter, 'inactive');
   };
 
-  const isMyTurnNow = G.currentPlayer === mySeatIndex && !resolving && G.phase === 'play';
-  const myTimerId = isMyTurnNow ? ' id="turn-timer-ring"' : '';
-  const myTimerClass = isMyTurnNow ? ' timer-ring' + (turnTimeLeft <= 3 ? ' timer-urgent' : '') : '';
   const topSeat = rel(2), leftSeat = rel(3), rightSeat = rel(1), meSeat = mySeatIndex;
   const avatarLabel = i => { if (i === mySeatIndex) return 'You'; const nm = pname(i); return nm.startsWith('Bot') ? nm.replace('Bot ', 'B') : nm.charAt(0).toUpperCase(); };
 
@@ -1262,9 +1298,9 @@ ${isOnline ? '<div class="reaction-bar"><button class="reaction-btn" onclick="se
   <div class="tz-btm">
     <div class="my-info">
       ${av(meSeat, 'You')}
-      <div class="my-name-ring${myTimerClass}"${myTimerId}>
-        <span class="pname">${pname(meSeat)}</span>
-        <span class="pscore">${G.scores[meSeat]}pts</span>
+      <div>
+        <div class="pname">${pname(meSeat)}</div>
+        <div class="pscore">${G.scores[meSeat]}pts</div>
       </div>
     </div>
     <div id="my-hand">${handHTML}</div>
@@ -1365,8 +1401,9 @@ function buildTarneebHTML() {
   const handHTML = buildTarneebHandHTML(myHand, playableIds, isMyTurn);
 
   const av = (i, letter) => {
-    const active = TG.phase === 'play' && TG.currentPlayer === i && !resolving;
-    return `<div class="avatar${active ? ' active' : ''}">${letter}</div>`;
+    if (TG.phase === 'play' && i === mySeatIndex && TG.currentPlayer === i && !resolving) return avatarWithRing(i, letter, 'mine');
+    if (TG.phase === 'play' && TG.currentPlayer === i && !resolving) return avatarWithRing(i, letter, 'bot');
+    return avatarWithRing(i, letter, 'inactive');
   };
 
   return `
@@ -1405,8 +1442,10 @@ function buildTarneebHTML() {
   </div>
   <div class="tz-btm">
     <div class="my-info">
-      <div class="avatar${TG.phase === 'play' && TG.currentPlayer === mySeatIndex ? ' active' : ''}">You</div>
-      <span class="pname">${pname(mySeatIndex)}</span>
+      ${av(mySeatIndex, 'You')}
+      <div>
+        <div class="pname">${pname(mySeatIndex)}</div>
+      </div>
     </div>
     <div id="my-hand">${handHTML}</div>
     <div style="display:flex;gap:8px;margin-top:4px">
@@ -1623,10 +1662,10 @@ function attachEvents() {
 function startTimer() {
   stopTimer();
   turnTimeLeft = CONFIG.timerSeconds;
-  updateTimerBar();
+  updateTimerRing();
   turnTimer = setInterval(() => {
     turnTimeLeft--;
-    updateTimerBar();
+    updateTimerRing();
     if (turnTimeLeft <= 0) {
       stopTimer();
       const pl = getPlayable(mySeatIndex);
@@ -1637,16 +1676,18 @@ function startTimer() {
     }
   }, 1000);
 }
-function stopTimer() { if (turnTimer !== null) { clearInterval(turnTimer); turnTimer = null; } turnTimeLeft = CONFIG.timerSeconds; updateTimerBar(); }
-function updateTimerBar() {
-  const ring = document.getElementById('turn-timer-ring');
-  if (!ring) return;
-  const pct = (turnTimeLeft / CONFIG.timerSeconds) * 100;
-  const r = Math.round(255 * (1 - turnTimeLeft / CONFIG.timerSeconds));
-  const g = Math.round(200 * (turnTimeLeft / CONFIG.timerSeconds));
-  ring.style.setProperty('--timer-pct', pct + '%');
-  ring.style.setProperty('--timer-color', `rgb(${r},${g},40)`);
-  ring.classList.toggle('timer-urgent', turnTimeLeft <= 3);
+function stopTimer() { if (turnTimer !== null) { clearInterval(turnTimer); turnTimer = null; } turnTimeLeft = CONFIG.timerSeconds; updateTimerRing(); }
+function updateTimerRing() {
+  const arc = document.querySelector('.avatar-wrap .ring-arc');
+  if (!arc) return;
+  const circ = 138.2;
+  const pct = turnTimeLeft / CONFIG.timerSeconds;
+  const offset = circ * (1 - pct);
+  arc.setAttribute('stroke-dashoffset', offset);
+  const stroke = turnTimeLeft > 15 ? '#22ee66' : turnTimeLeft > 5 ? '#ffaa00' : '#ff3333';
+  arc.setAttribute('stroke', stroke);
+  const wrap = arc.closest('.avatar-wrap');
+  if (wrap) wrap.classList.toggle('ring-urgent', turnTimeLeft <= 5);
 }
 
 // ── MENU ─────────────────────────────────────────────────────
