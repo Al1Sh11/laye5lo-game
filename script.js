@@ -685,26 +685,68 @@ function getPlayable(idx) {
   return h;
 }
 
+function animateCardPlay(fromEl, cardHTML, onDone) {
+  const gameEl = document.getElementById('game');
+  if (!gameEl || !fromEl) { onDone(); return; }
+
+  const fromRect = fromEl.getBoundingClientRect();
+  const gameRect = gameEl.getBoundingClientRect();
+  const fx = fromRect.left - gameRect.left + fromRect.width / 2;
+  const fy = fromRect.top - gameRect.top + fromRect.height / 2;
+
+  const tx = gameEl.offsetWidth / 2;
+  const ty = gameEl.offsetHeight * 0.42;
+
+  const clone = document.createElement('div');
+  clone.innerHTML = cardHTML;
+  const cardNode = clone.firstElementChild;
+  if (!cardNode) { onDone(); return; }
+  cardNode.style.cssText = `position:absolute;left:${fx - 27}px;top:${fy - 41}px;z-index:40;pointer-events:none;`;
+  gameEl.appendChild(cardNode);
+
+  const dx = tx - fx;
+  const dy = ty - fy;
+
+  cardNode.animate([
+    { transform: 'translate(0,0) scale(1)', boxShadow: '2px 4px 10px rgba(0,0,0,0.55)' },
+    { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 20}px) scale(1.08)`, offset: 0.45 },
+    { transform: `translate(${dx}px,${dy}px) scale(1)`, boxShadow: '0 12px 28px rgba(0,0,0,0.8)' },
+  ], { duration: 280, easing: 'cubic-bezier(0.22,0.61,0.36,1)', fill: 'forwards' })
+    .finished.then(() => { cardNode.remove(); onDone(); });
+}
+
 function executePlay(pi, card, reason = '') {
   stopTimer();
   playCardSound();
   G.botThought = pi !== 0 && reason ? `${pname(pi)} chose ${lbl(card)} because ${reason}.` : '';
-  if (!G.playedCards) G.playedCards = [];
-  G.playedCards.push(card);
-  G.table.push({ pi, card });
-  G.hands[pi] = sortHand(G.hands[pi].filter(c => c.id !== card.id));
-  if (!G.leadColor) G.leadColor = card.color;
-  G.selected = [];
-  if (hasBothLees(G.table) || G.table.length === 4 || !hasNextTrickPlayer(G.currentPlayer)) {
-    resolving = true;
-    G.statusMsg = hasBothLees(G.table) ? 'Both Lee5as taken! Round ends now.' : 'Trick complete...';
-    render();
-    setTimeout(finishTrick, CONFIG.trickDelayMs);
+
+  const doPlay = () => {
+    if (!G.playedCards) G.playedCards = [];
+    G.playedCards.push(card);
+    G.table.push({ pi, card });
+    G.hands[pi] = sortHand(G.hands[pi].filter(c => c.id !== card.id));
+    if (!G.leadColor) G.leadColor = card.color;
+    G.selected = [];
+    if (hasBothLees(G.table) || G.table.length === 4 || !hasNextTrickPlayer(G.currentPlayer)) {
+      resolving = true;
+      G.statusMsg = hasBothLees(G.table) ? 'Both Lee5as taken! Round ends now.' : 'Trick complete...';
+      render();
+      setTimeout(finishTrick, CONFIG.trickDelayMs);
+    } else {
+      G.currentPlayer = nextTrickP(G.currentPlayer);
+      setStatus(); render();
+      if (G.currentPlayer === mySeatIndex) startTimer();
+      else setTimeout(aiPlay, CONFIG.botDelayMs);
+    }
+  };
+
+  if (pi === mySeatIndex) {
+    const cardEl = document.querySelector(`[data-play="${card.id}"]`);
+    const html = cardEl ? cardEl.outerHTML : '';
+    if (cardEl) cardEl.style.visibility = 'hidden';
+    animateCardPlay(cardEl, html, doPlay);
   } else {
-    G.currentPlayer = nextTrickP(G.currentPlayer);
-    setStatus(); render();
-    if (G.currentPlayer === mySeatIndex) startTimer();
-    else setTimeout(aiPlay, CONFIG.botDelayMs);
+    doPlay();
   }
 }
 function nextP(p) { return (p + 1) % 4; }
