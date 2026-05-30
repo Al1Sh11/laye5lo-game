@@ -5,7 +5,7 @@ module.exports = {
   email: {
     service: 'gmail',
     user: process.env.EMAIL_USER || 'laye5lo.game@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password-here',
+    pass: process.env.EMAIL_PASS || process.env.GMAIL_PASS || 'your-app-password-here',
   },
   codeExpiry: 10 * 60 * 1000, // 10 minutes
 };
