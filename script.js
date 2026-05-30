@@ -1046,6 +1046,25 @@ function tarneebNextRound() {
   });
 }
 
+function buildLee5aHandHTML(hand, playableIds, selIds, giftedIds, isSelectable, blockedColors = new Set()) {
+  const groups = {};
+  COLOR_ORDER.forEach(col => { groups[col] = hand.filter(c => c.color === col); });
+  return `<div class="hand-groups">${COLOR_ORDER.filter(col => groups[col].length > 0).map(col => {
+    const cards = groups[col];
+    const isPlayable = cards.some(c => playableIds.has(c.id));
+    const groupClass = isSelectable ? (isPlayable ? 'playable' : 'unplayable') : '';
+    const isBlocked = blockedColors.has(col);
+    return `<div class="hand-group ${groupClass}${isBlocked ? ' gift-blocked' : ''}">
+      <div class="hand-group-label ${COLOR_CLASS[col]}">${col} ${COLOR_PIP[col]}</div>
+      <div class="hand-group-cards">${cards.map(c => {
+        const sel = selIds && selIds.has(c.id);
+        const gifted = giftedIds && giftedIds.has(c.id);
+        return cardEl(c, { selectable: isSelectable && isPlayable, playable: isPlayable, selected: sel, gifted });
+      }).join('')}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 // ── CARD HTML ────────────────────────────────────────────────
 function cardEl(card, opts = {}) {
   const { selectable = false, playable = true, selected = false, rot = 0, offsuit = false, small = false, gifted = false } = opts;
@@ -1153,17 +1172,7 @@ function buildPlayHTML() {
   }
 
   const myHand = G.hands[mySeatIndex];
-  const n = myHand.length;
-  const handHTML = myHand.map((c, i) => {
-    const offset = n > 1 ? (i / (n - 1) - 0.5) * Math.min(n * 2, 24) : 0;
-    const yOff = Math.abs(offset) * 0.3;
-    const sel = selIds.has(c.id);
-    const play = playableIds.has(c.id);
-    const gifted = giftedIds.has(c.id);
-    return `<div style="transform:rotate(${offset}deg) translateY(${yOff}px);transform-origin:bottom center;display:inline-block">
-      ${cardEl(c, { selectable: isMyTurn, playable: play, selected: sel, gifted })}
-    </div>`;
-  }).join('');
+  const handHTML = buildLee5aHandHTML(myHand, playableIds, selIds, giftedIds, isMyTurn);
 
   const av = (i, letter) => {
     const active = G.currentPlayer === i && !resolving && G.phase === 'play';
