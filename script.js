@@ -89,6 +89,7 @@ const SUIT_CLASS = { spades: 'cs', hearts: 'ch', diamonds: 'cd', clubs: 'cc' };
 
 // ── SOCKET EVENTS ────────────────────────────────────────────
 socket.on("connect", () => {
+  connState = 'connected'; updateConnDot();
   console.log("Connected:", socket.id);
   const saved = sessionStorage.getItem('laye5lo-room');
   if (saved) {
@@ -96,7 +97,22 @@ socket.on("connect", () => {
     socket.emit('rejoinRoom', { roomCode, seatIndex, name });
   }
 });
-socket.on("disconnect", () => console.log("Disconnected"));
+socket.on("disconnect", () => { connState = 'disconnected'; updateConnDot(); });
+socket.on("connect_error", () => { connState = 'reconnecting'; updateConnDot(); });
+
+function updateConnDot() {
+  const dot = document.querySelector('.conn-dot');
+  if (dot) {
+    dot.classList.remove('yellow', 'red');
+    if (connState === 'reconnecting') dot.classList.add('yellow');
+    else if (connState === 'disconnected') dot.classList.add('red');
+  }
+  const banner = document.querySelector('.conn-banner');
+  if (banner) {
+    banner.classList.toggle('visible', connState !== 'connected');
+    banner.textContent = connState === 'reconnecting' ? 'Reconnecting...' : 'Connection lost. Reconnecting...';
+  }
+}
 
 socket.on("roomCreated", (data) => {
   G = { ...G, phase: "roomLobby", modal: null, roomCode: data.roomCode, isHost: true,
@@ -529,6 +545,7 @@ let nextRoundStarter = 0;
 let botDifficulty = 'easy';
 let lastTrick = null;
 let lastHoveredCard = null;
+let connState = 'connected';
 
 function initMenu() {
   stopTimer();
@@ -1416,6 +1433,8 @@ function buildPlayHTML() {
 <button class="back-arrow" onclick="backToMenu()" aria-label="Back to menu">&lsaquo;</button>
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">${darkMode ? '☀️' : '🌙'}</button>
 <button class="sound-toggle" onclick="toggleSound()" aria-label="Toggle sound">${soundEnabled ? '🔊' : '🔇'}</button>
+<div class="conn-dot${connState === 'reconnecting' ? ' yellow' : connState === 'disconnected' ? ' red' : ''}"></div>
+<div class="conn-banner${connState !== 'connected' ? ' visible' : ''}">${connState === 'reconnecting' ? 'Reconnecting...' : 'Connection lost. Reconnecting...'}</div>
 ${isOnline ? '<div class="reaction-bar"><button class="reaction-btn" onclick="sendReaction(\'👏\')">👏</button><button class="reaction-btn" onclick="sendReaction(\'😱\')">😱</button><button class="reaction-btn" onclick="sendReaction(\'😂\')">😂</button><button class="reaction-btn" onclick="sendReaction(\'🎯\')">🎯</button></div>' : ''}
 <div id="game-layout">
   ${buildScoreSidebar(G.scores, CONFIG.winScore, 'lee5a')}
@@ -1573,6 +1592,8 @@ function buildTarneebHTML() {
 <button class="back-arrow" onclick="backToMenu()" aria-label="Back to menu">&lsaquo;</button>
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">${darkMode ? '☀️' : '🌙'}</button>
 <button class="sound-toggle" onclick="toggleSound()" aria-label="Toggle sound">${soundEnabled ? '🔊' : '🔇'}</button>
+<div class="conn-dot${connState === 'reconnecting' ? ' yellow' : connState === 'disconnected' ? ' red' : ''}"></div>
+<div class="conn-banner${connState !== 'connected' ? ' visible' : ''}">${connState === 'reconnecting' ? 'Reconnecting...' : 'Connection lost. Reconnecting...'}</div>
 <div id="game-layout">
   ${buildScoreSidebar([TG.scores[0], TG.scores[0], TG.scores[1], TG.scores[1]], CONFIG.tarneebWinScore, 'tarneeb')}
   <div id="table-wrap">

@@ -921,3 +921,45 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   box-shadow: 0 0 0 2px rgba(255,80,80,0.8) !important;
   border-color: rgba(255,80,80,0.8) !important;
 }
+.conn-dot {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 20;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22ee66;
+  box-shadow: 0 0 6px rgba(34,238,102,0.7);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.conn-dot.yellow {
+  background: #ffaa00;
+  box-shadow: 0 0 6px rgba(255,170,0,0.7);
+  animation: connPulse 1s ease-in-out infinite;
+}
+.conn-dot.red {
+  background: #ff3333;
+  box-shadow: 0 0 6px rgba(255,51,51,0.7);
+}
+@keyframes connPulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.conn-banner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 30;
+  background: rgba(200,80,0,0.92);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 7px;
+  border-radius: 16px 16px 0 0;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+.conn-banner.visible {
+  transform: translateY(0);
+}
