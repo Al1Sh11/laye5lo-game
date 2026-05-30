@@ -1,19 +1,19 @@
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;background:transparent;font-family:'Segoe UI',system-ui,sans-serif}
+html,body{width:100%;height:100%;background:transparent;font-family:'Segoe UI',system-ui,sans-serif}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 
 #game{
   width:100%;
-  min-height:620px;
+  height:100svh;
+  min-height:480px;
   background:radial-gradient(ellipse at center, #1a5c32 0%, #0d3a1e 55%, #071e0f 100%);
   border-radius:16px;
   position:relative;
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  align-items:center;
-  justify-content:between;
-  padding:10px 8px 8px;
+  align-items:stretch;
+  padding:6px 6px 4px;
   box-shadow:inset 0 0 60px rgba(0,0,0,0.5);
   user-select:none;
   transition:background 0.4s;
@@ -323,7 +323,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 /* main menu */
 .menu-screen{
-  width:100%;min-height:600px;position:relative;z-index:1;
+  width:100%;min-height:0;flex:1;position:relative;z-index:1;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:28px;padding:28px 18px;text-align:center;
 }
@@ -536,25 +536,26 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 /* ── FIXED TABLE LAYOUT ── */
 #table-wrap{
   width:100%;
+  flex:1;
+  min-height:0;
   position:relative;
   display:grid;
-  grid-template-rows: 116px 1fr 170px;
-  grid-template-columns: 72px 1fr 72px;
+  grid-template-rows: minmax(90px,18%) 1fr minmax(130px,30%);
+  grid-template-columns: 60px 1fr 60px;
   grid-template-areas:
     "top2  top2  top2"
     "left  mid   right"
     "btm   btm   btm";
-  gap:4px;
-  min-height:500px;
+  gap:2px;
 }
-.tz-top2  {grid-area:top2;display:flex;justify-content:center;align-items:flex-start}
-.tz-left  {grid-area:left;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:4px}
-.tz-mid   {grid-area:mid;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:160px}
-.tz-right {grid-area:right;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:4px}
-.tz-btm   {grid-area:btm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;min-height:170px}
-.tz-top2 .player-zone{height:112px}
-.tz-left .player-zone,.tz-right .player-zone{height:150px}
-#my-hand{min-height:92px}
+.tz-top2  {grid-area:top2;display:flex;justify-content:center;align-items:flex-start;overflow:hidden}
+.tz-left  {grid-area:left;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.tz-mid   {grid-area:mid;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden}
+.tz-right {grid-area:right;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.tz-btm   {grid-area:btm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;overflow:hidden;padding-bottom:4px}
+.tz-top2 .player-zone{max-height:108px}
+.tz-left .player-zone,.tz-right .player-zone{max-height:140px}
+#my-hand{min-height:0;overflow:hidden}
 
 /* ── BIDDING UI ── */
 .bid-panel{
@@ -708,12 +709,33 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   .card .cnum{font-size:16px}
   .card .csym{font-size:8px}
   .card .corner{font-size:8px}
-  .my-name-ring{width:48px;height:48px}
   .game-picker{flex-direction:column;gap:10px}
   .game-pick-card{width:100%;height:80px;flex-direction:row;gap:12px}
-  .table-played{width:180px;height:180px}
-  .mini-back{width:18px;height:28px}
-  .mini-back-v{width:24px;height:16px}
+  .table-played{width:160px;height:160px}
+  .mini-back{width:16px;height:24px}
+  .mini-back-v{width:20px;height:14px}
+  .hand-group-cards .card{margin-right:-14px}
+  .avatar-wrap{width:46px;height:46px}
+  .avatar-wrap .avatar{width:36px;height:36px;font-size:11px}
+  .avatar-wrap svg{width:46px;height:46px}
+}
+/* Short viewport — shrink cards further so hand fits without scroll */
+@media(max-height:700px){
+  .card{width:42px;height:64px;font-size:14px}
+  .card .cnum{font-size:14px}
+  .hand-groups{gap:6px}
+  .hand-group-cards .card{margin-right:-14px}
+  #table-wrap{grid-template-rows: minmax(80px,16%) 1fr minmax(110px,28%)}
+}
+@media(max-height:560px){
+  .card{width:36px;height:54px;font-size:12px;border-radius:5px}
+  .card .cnum{font-size:12px}
+  .card .corner{font-size:8px}
+  .hand-group-cards .card{margin-right:-16px}
+  #table-wrap{grid-template-rows: minmax(64px,14%) 1fr minmax(90px,24%)}
+  .avatar-wrap{width:38px;height:38px}
+  .avatar-wrap .avatar{width:30px;height:30px;font-size:10px}
+  .avatar-wrap svg{width:38px;height:38px}
 }
 
 /* ── ACCESSIBILITY ── */
@@ -818,6 +840,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   width: 100%;
   gap: 8px;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .score-sidebar {
   width: 130px;
@@ -825,10 +849,12 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   background: rgba(0,0,0,0.5);
   border: 1px solid rgba(255,200,50,0.18);
   border-radius: 12px;
-  padding: 12px 10px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .score-sidebar .sidebar-title {
   color: rgba(255,200,50,0.7);
@@ -907,7 +933,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 /* On desktop: hide score-strip, show sidebar */
 @media (min-width: 640px) {
   .score-strip { display: none; }
-  #table-wrap { flex: 1; min-width: 0; }
+  #table-wrap { flex: 1; min-width: 0; min-height: 0; }
 }
 .gift-rule-hint {
   font-size: 10px;
