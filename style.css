@@ -719,3 +719,59 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 /* ── ACCESSIBILITY ── */
 .card:focus-visible{outline:2px solid #ffe066;outline-offset:2px}
 [role="status"]{/* for screen readers */}
+
+/* ── GROUPED HAND ── */
+.hand-groups {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.hand-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.hand-group-label {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.hand-group-cards {
+  display: flex;
+}
+.hand-group-cards .card {
+  margin-right: -12px;
+}
+.hand-group-cards .card:last-child {
+  margin-right: 0;
+}
+.hand-group.unplayable {
+  opacity: 0.3;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+/* color glow on playable groups */
+.hand-group.playable .card.cr { box-shadow: 0 0 12px rgba(255,68,68,0.6), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(255,100,100,0.7); }
+.hand-group.playable .card.cb { box-shadow: 0 0 12px rgba(51,136,255,0.6), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(68,153,255,0.7); }
+.hand-group.playable .card.cg { box-shadow: 0 0 12px rgba(34,204,85,0.6), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(51,221,102,0.7); }
+.hand-group.playable .card.cy { box-shadow: 0 0 12px rgba(255,208,0,0.5), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(255,220,50,0.7); }
+/* Tarneeb suit glows */
+.hand-group.playable .card.cs { box-shadow: 0 0 12px rgba(180,180,180,0.4), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(200,200,200,0.5); }
+.hand-group.playable .card.ch { box-shadow: 0 0 12px rgba(255,68,68,0.6), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(255,100,100,0.7); }
+.hand-group.playable .card.cd { box-shadow: 0 0 12px rgba(255,100,68,0.6), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(255,130,100,0.7); }
+.hand-group.playable .card.cc { box-shadow: 0 0 12px rgba(68,136,200,0.5), 2px 6px 20px rgba(0,0,0,0.65); border: 2px solid rgba(100,160,220,0.6); }
+
+.hand-group-label.cr { color: #ff8888; }
+.hand-group-label.cb { color: #6699ff; }
+.hand-group-label.cg { color: #66dd88; }
+.hand-group-label.cy { color: #ffe066; }
+.hand-group-label.cs { color: #cccccc; }
+.hand-group-label.ch { color: #ff8888; }
+.hand-group-label.cd { color: #ffaa88; }
+.hand-group-label.cc { color: #88bbff; }
