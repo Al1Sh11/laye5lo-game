@@ -128,17 +128,11 @@ Score modal (`buildModal`) slide-up reveal:
 
 ---
 
-## 6. Rule Bug Fix — Both Lee5as
+## 6. Rule Clarification — Both Lee5as
 
-**Rule:** If a player takes both Lee5as (blue +2 and yellow 0) in the **same trick**, the round ends immediately and that player receives **+36 points** (not the sum of individual card values).
+**Rule:** If a player takes both Lee5as (blue +2 and yellow 0) in the **same trick**, the round ends immediately and that player receives **+37 points**. This is correct in the existing code — no change needed.
 
-**Current bug:** `server.js` line `const trickPts = leesOnTable === 2 ? 37 : ...` and the matching client-side `trickDangerWith()` both award **37** — this is wrong.
-
-**Fix required in both files:**
-- `server.js`: `leesOnTable === 2 ? 36 : ...`
-- `script.js`: `trickDangerWith()` return value `37 → 36`, status message `+37 pts → +36 pts`, modal badge threshold `rp[i] === 37 → rp[i] === 36`
-
-**Rules display:** The Lee5a rules modal text must clearly state: *"Both Lee5as taken in one trick = +36 pts and the round ends immediately."*
+**Rules display only:** The Lee5a rules modal text must clearly state: *"Both Lee5as taken in one trick = +37 pts and the round ends immediately."* The current modal says `37 pts` but buries it — make it prominent.
 
 ---
 
@@ -171,10 +165,9 @@ Score modal (`buildModal`) slide-up reveal:
 | File | Change |
 |---|---|
 | `style.css` | New theme variables, ring styles, hand layout, sidebar, animation keyframes, desktop breakpoint |
-| `script.js` | `updateTimerRing()`, `buildHandHTML()`, grouped hand renderer, WAAPI animation functions, sidebar render, `CONFIG.timerSeconds = 30`, clarity fix UI, Lee5a both-lees value 37→36 |
-| `server.js` | Both-lees trick points 37→36 |
+| `script.js` | `updateTimerRing()`, `buildHandHTML()`, grouped hand renderer, WAAPI animation functions, sidebar render, `CONFIG.timerSeconds = 30`, clarity fix UI, rules modal update |
 
-No server changes. No new files (keep the single-file frontend architecture).
+No server changes needed. No new files (keep the single-file frontend architecture).
 
 ---
 
